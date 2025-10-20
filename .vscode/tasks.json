@@ -1,0 +1,16 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run ShootingGame",
+			"type": "shell",
+			"command": "D:/GitRepo/shooting_game/.venv/Scripts/python.exe",
+			"args": [
+				"game.py"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		}
+	]
+}
