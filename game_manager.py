@@ -6,6 +6,7 @@ import pygame
 import random
 import time
 from entities import Player, Enemy, Bullet
+from audio_manager import AudioManager
 
 class GameManager:
     """Manages game state and logic"""
@@ -45,6 +46,13 @@ class GameManager:
         self.font = pygame.font.Font(None, 36)
         self.large_font = pygame.font.Font(None, 72)
         
+        # Audio manager
+        self.audio = AudioManager()
+        # Don't play music in __init__, wait until game starts
+        
+        # Create starfield background
+        self.stars = self.create_starfield()
+        
     def reset_game(self):
         """Reset game for new playthrough"""
         self.all_sprites.empty()
@@ -62,14 +70,45 @@ class GameManager:
         self.game_time = 0
         self.state = self.PLAYING
         
+        # Restart background music from the beginning
+        self.audio.restart_music()
+    
+    def create_starfield(self):
+        """Create a starfield background"""
+        stars = []
+        for _ in range(100):
+            x = random.randint(0, self.screen_width)
+            y = random.randint(0, self.screen_height)
+            size = random.randint(1, 3)
+            brightness = random.randint(100, 255)
+            speed = random.uniform(0.1, 0.5)
+            stars.append({'x': x, 'y': y, 'size': size, 'brightness': brightness, 'speed': speed})
+        return stars
+    
+    def update_starfield(self):
+        """Update starfield animation"""
+        for star in self.stars:
+            star['y'] += star['speed']
+            if star['y'] > self.screen_height:
+                star['y'] = 0
+                star['x'] = random.randint(0, self.screen_width)
+    
+    def draw_starfield(self):
+        """Draw animated starfield"""
+        for star in self.stars:
+            color = (star['brightness'], star['brightness'], star['brightness'])
+            pygame.draw.circle(self.screen, color, (int(star['x']), int(star['y'])), star['size'])
+        
     def handle_event(self, event):
         """Handle pygame events"""
         if event.type == pygame.KEYDOWN:
             if self.state == self.MENU:
                 if event.key == pygame.K_SPACE:
+                    self.audio.play_sound('menu_select')
                     self.reset_game()
             elif self.state == self.GAME_OVER:
                 if event.key == pygame.K_SPACE:
+                    self.audio.play_sound('menu_select')
                     self.state = self.MENU
     
     def spawn_enemy(self):
@@ -95,6 +134,9 @@ class GameManager:
     
     def update(self):
         """Update game logic based on current state"""
+        # Update starfield in all states
+        self.update_starfield()
+        
         if self.state == self.PLAYING:
             # Update game time
             self.game_time = time.time() - self.game_start_time
@@ -108,6 +150,7 @@ class GameManager:
             for bullet in bullets:
                 self.player_bullets.add(bullet)
                 self.all_sprites.add(bullet)
+                self.audio.play_sound('shoot')  # Play shoot sound
             
             # Spawn enemies
             self.enemy_spawn_timer += 1
@@ -125,6 +168,7 @@ class GameManager:
                     if bullet:
                         self.enemy_bullets.add(bullet)
                         self.all_sprites.add(bullet)
+                        self.audio.play_sound('enemy_shoot')  # Play enemy shoot sound
             
             # Update bullets
             for bullet in self.player_bullets:
@@ -140,12 +184,15 @@ class GameManager:
                     for enemy in hit_enemies:
                         if enemy.take_damage(10):
                             self.score += 10
+                            self.audio.play_sound('hit')  # Play hit sound
             
             # Check enemy bullet-player collisions
             hit_bullets = pygame.sprite.spritecollide(self.player, self.enemy_bullets, True)
             if hit_bullets:
                 if self.player.take_damage(1):
                     self.state = self.GAME_OVER
+                    self.audio.stop_music()  # Stop music when game over
+                    self.audio.play_sound('game_over')  # Play game over sound
                     if self.score > self.high_score:
                         self.high_score = self.score
             
@@ -154,12 +201,18 @@ class GameManager:
             if hit_enemies:
                 if self.player.take_damage(1):
                     self.state = self.GAME_OVER
+                    self.audio.stop_music()  # Stop music when game over
+                    self.audio.play_sound('game_over')  # Play game over sound
                     if self.score > self.high_score:
                         self.high_score = self.score
     
     def draw(self):
         """Draw game based on current state"""
-        self.screen.fill((0, 0, 0))  # Black background
+        # Draw dark space background
+        self.screen.fill((5, 5, 15))  # Dark blue-black space
+        
+        # Draw animated starfield
+        self.draw_starfield()
         
         if self.state == self.MENU:
             self.draw_menu()
@@ -198,12 +251,26 @@ class GameManager:
         score_text = self.font.render(f"Score: {self.score}", True, (255, 255, 255))
         self.screen.blit(score_text, (10, 10))
         
-        # Draw UI - Health (Hearts)
+        # Draw UI - Health (Hearts as shapes instead of text)
         heart_x = 10
         heart_y = 50
+        heart_size = 20
         for i in range(self.player.health):
-            heart_text = self.font.render("♥", True, (255, 0, 0))
-            self.screen.blit(heart_text, (heart_x + i * 40, heart_y))
+            # Draw simple heart shape using polygons
+            x = heart_x + i * 35
+            y = heart_y
+            
+            # Draw a simple heart using circles and triangle
+            # Left circle
+            pygame.draw.circle(self.screen, (255, 0, 0), (x + 8, y + 8), 8)
+            # Right circle
+            pygame.draw.circle(self.screen, (255, 0, 0), (x + 20, y + 8), 8)
+            # Bottom triangle
+            pygame.draw.polygon(self.screen, (255, 0, 0), [
+                (x + 2, y + 10),
+                (x + 26, y + 10),
+                (x + 14, y + 28)
+            ])
         
         # Draw UI - Game Time
         minutes = int(self.game_time // 60)

@@ -14,9 +14,9 @@ class Player(pygame.sprite.Sprite):
         self.screen_width = screen_width
         self.screen_height = screen_height
         
-        # Create player surface
-        self.image = pygame.Surface((50, 40))
-        self.image.fill((0, 255, 0))  # Green player
+        # Create player surface with transparency
+        self.image = pygame.Surface((50, 40), pygame.SRCALPHA)
+        self.draw_player()
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
         
@@ -24,6 +24,36 @@ class Player(pygame.sprite.Sprite):
         self.health = 3  # 3 lives
         self.shoot_cooldown = 0
         self.shoot_delay = 10  # frames between shots
+    
+    def draw_player(self):
+        """Draw player in retro space game style - simple square ship"""
+        # Clear surface
+        self.image.fill((0, 0, 0, 0))
+        
+        # Main ship body - bright green square with slight rounded corners
+        pygame.draw.rect(self.image, (0, 220, 0), (10, 8, 30, 24), border_radius=4)
+        
+        # Darker inner panel (retro detail)
+        pygame.draw.rect(self.image, (0, 150, 0), (14, 12, 22, 16), border_radius=2)
+        
+        # Cockpit window (bright cyan)
+        pygame.draw.rect(self.image, (0, 255, 255), (20, 14, 10, 8), border_radius=2)
+        
+        # Wing details (small rectangles on sides)
+        pygame.draw.rect(self.image, (0, 180, 0), (8, 16, 4, 8))  # Left wing
+        pygame.draw.rect(self.image, (0, 180, 0), (38, 16, 4, 8))  # Right wing
+        
+        # Engine exhausts (simple rectangles at bottom)
+        pygame.draw.rect(self.image, (255, 150, 0), (14, 32, 6, 4))  # Left engine
+        pygame.draw.rect(self.image, (255, 150, 0), (30, 32, 6, 4))  # Right engine
+        
+        # Bright engine cores
+        pygame.draw.rect(self.image, (255, 255, 100), (15, 33, 4, 2))
+        pygame.draw.rect(self.image, (255, 255, 100), (31, 33, 4, 2))
+        
+        # White highlights on edges (retro reflections)
+        pygame.draw.line(self.image, (100, 255, 150), (11, 9), (38, 9), 2)  # Top edge
+        pygame.draw.line(self.image, (0, 180, 100), (11, 30), (38, 30), 1)  # Bottom edge
         
     def update(self, keys):
         """Update player position based on keyboard input (WASD only)"""
@@ -102,15 +132,53 @@ class Enemy(pygame.sprite.Sprite):
         self.screen_width = screen_width
         self.screen_height = screen_height
         
-        # Create enemy surface
-        self.image = pygame.Surface((40, 40))
-        self.image.fill((255, 0, 0))  # Red enemy
+        # Create enemy surface with transparency
+        self.image = pygame.Surface((40, 40), pygame.SRCALPHA)
+        self.draw_enemy()
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
         
         self.speed = random.randint(1, 2)
         self.health = 30
         self.shoot_cooldown = random.randint(60, 180)  # Random shooting interval
+    
+    def draw_enemy(self):
+        """Draw enemy in retro space game style - simple circle with details"""
+        # Clear surface
+        self.image.fill((0, 0, 0, 0))
+        
+        center = (20, 20)
+        
+        # Main body - solid red circle
+        pygame.draw.circle(self.image, (220, 0, 0), center, 16)
+        
+        # Darker inner ring (depth)
+        pygame.draw.circle(self.image, (150, 0, 0), center, 12)
+        
+        # Central core panel (darker red square)
+        pygame.draw.rect(self.image, (180, 0, 0), (14, 14, 12, 12))
+        
+        # Center energy indicator (small yellow square)
+        pygame.draw.rect(self.image, (255, 200, 0), (17, 17, 6, 6))
+        
+        # Four directional panels (retro sci-fi details)
+        panel_color = (100, 0, 0)
+        pygame.draw.rect(self.image, panel_color, (18, 8, 4, 4))   # Top
+        pygame.draw.rect(self.image, panel_color, (18, 28, 4, 4))  # Bottom
+        pygame.draw.rect(self.image, panel_color, (8, 18, 4, 4))   # Left
+        pygame.draw.rect(self.image, panel_color, (28, 18, 4, 4))  # Right
+        
+        # Small accent lights on panels (orange dots)
+        pygame.draw.circle(self.image, (255, 150, 0), (20, 10), 1)
+        pygame.draw.circle(self.image, (255, 150, 0), (20, 30), 1)
+        pygame.draw.circle(self.image, (255, 150, 0), (10, 20), 1)
+        pygame.draw.circle(self.image, (255, 150, 0), (30, 20), 1)
+        
+        # Outer ring highlight (retro glow effect)
+        pygame.draw.circle(self.image, (255, 100, 100), center, 16, width=2)
+        
+        # Inner highlight ring
+        pygame.draw.circle(self.image, (255, 50, 50), center, 12, width=1)
         
     def update(self, player_pos):
         """Move enemy toward player and handle shooting"""
@@ -169,15 +237,52 @@ class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, speed_x, speed_y, color=(255, 255, 0), is_enemy=False):
         super().__init__()
         
-        # Create bullet surface
-        self.image = pygame.Surface((8, 8))
-        self.image.fill(color)
+        # Create bullet surface with transparency and glow
+        self.image = pygame.Surface((12, 12), pygame.SRCALPHA)
+        self.is_enemy = is_enemy
+        self.draw_bullet(color, is_enemy)
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
         
         self.speed_x = speed_x
         self.speed_y = speed_y
-        self.is_enemy = is_enemy
+    
+    def draw_bullet(self, color, is_enemy):
+        """Draw bullet in retro space game style - simple with clean glow"""
+        # Clear surface
+        self.image.fill((0, 0, 0, 0))
+        
+        center = (6, 6)
+        
+        if is_enemy:
+            # Enemy bullet - red/orange retro style
+            # Outer glow ring
+            pygame.draw.circle(self.image, (255, 100, 0, 80), center, 6)
+            pygame.draw.circle(self.image, (255, 50, 0, 120), center, 5)
+            
+            # Main body - solid red
+            pygame.draw.circle(self.image, (255, 30, 30), center, 4)
+            
+            # Inner bright core
+            pygame.draw.circle(self.image, (255, 150, 100), center, 2)
+            
+            # Center pixel highlight
+            pygame.draw.circle(self.image, (255, 255, 200), center, 1)
+            
+        else:
+            # Player bullet - cyan/white retro style
+            # Outer glow ring
+            pygame.draw.circle(self.image, (0, 255, 255, 100), center, 6)
+            pygame.draw.circle(self.image, (100, 255, 255, 150), center, 5)
+            
+            # Main body - bright cyan
+            pygame.draw.circle(self.image, (100, 255, 255), center, 4)
+            
+            # Inner bright core
+            pygame.draw.circle(self.image, (200, 255, 255), center, 2)
+            
+            # Center pixel highlight (pure white)
+            pygame.draw.circle(self.image, (255, 255, 255), center, 1)
         
     def update(self, screen_width, screen_height):
         """Move bullet"""

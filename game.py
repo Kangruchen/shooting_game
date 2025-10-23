@@ -11,6 +11,9 @@ from game_manager import GameManager
 # Initialize Pygame
 pygame.init()
 
+# Disable text input to prevent IME interference
+pygame.key.stop_text_input()
+
 # Constants
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
@@ -22,6 +25,9 @@ def main():
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption("ShootingGame")
     clock = pygame.time.Clock()
+    
+    # Ensure text input is stopped (important for IME compatibility)
+    pygame.key.stop_text_input()
     
     # Create game manager
     game_manager = GameManager(screen, SCREEN_WIDTH, SCREEN_HEIGHT)
