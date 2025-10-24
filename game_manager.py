@@ -10,6 +10,71 @@ from entities import Player, Enemy, TriangleEnemy, Bullet, HealthPack, PowerUp
 from audio_manager import AudioManager
 from config_loader import config
 
+class ScorePopup(pygame.sprite.Sprite):
+    """Floating score text that appears when enemy is destroyed"""
+    
+    def __init__(self, x, y, points, is_powered=False):
+        super().__init__()
+        self.points = points
+        self.lifetime = 60  # Show for 1 second at 60 FPS
+        self.age = 0
+        self.is_powered = is_powered
+        
+        # Create text with outline for better visibility
+        font_size = 40 if is_powered else 30
+        font = pygame.font.Font(None, font_size)
+        text = f"+{points}"
+        
+        if is_powered:
+            # Create a surface with glow effect for powered-up scores
+            text_color = (255, 215, 0)  # Gold
+            outline_color = (255, 165, 0)  # Orange outline
+            
+            # Render text with outline
+            text_surface = font.render(text, True, text_color)
+            outline_surface = font.render(text, True, outline_color)
+            
+            # Create image with padding for outline
+            padding = 4
+            self.image = pygame.Surface((text_surface.get_width() + padding * 2, 
+                                        text_surface.get_height() + padding * 2), pygame.SRCALPHA)
+            
+            # Draw outline (4 directions)
+            self.image.blit(outline_surface, (padding - 2, padding))
+            self.image.blit(outline_surface, (padding + 2, padding))
+            self.image.blit(outline_surface, (padding, padding - 2))
+            self.image.blit(outline_surface, (padding, padding + 2))
+            
+            # Draw main text
+            self.image.blit(text_surface, (padding, padding))
+        else:
+            # Normal score - simple white text
+            text_color = (255, 255, 255)
+            self.image = font.render(text, True, text_color)
+        
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
+        
+        # Movement
+        self.vel_y = -2  # Float upward
+        self.start_y = y
+        
+    def update(self):
+        """Update popup animation"""
+        self.age += 1
+        
+        # Float upward
+        self.rect.y += self.vel_y
+        
+        # Fade out effect by adjusting alpha
+        if self.age > self.lifetime * 0.5:
+            fade = 1.0 - (self.age - self.lifetime * 0.5) / (self.lifetime * 0.5)
+            self.image.set_alpha(int(255 * fade))
+        
+        # Remove when lifetime expires
+        if self.age >= self.lifetime:
+            self.kill()
+
 class GameManager:
     """Manages game state and logic"""
     
@@ -33,6 +98,7 @@ class GameManager:
         self.player_bullets = pygame.sprite.Group()
         self.enemy_bullets = pygame.sprite.Group()
         self.health_packs = pygame.sprite.Group()
+        self.score_popups = pygame.sprite.Group()  # Floating score text
         
         # Player
         self.player = None
@@ -70,6 +136,7 @@ class GameManager:
         self.player_bullets.empty()
         self.enemy_bullets.empty()
         self.health_packs.empty()
+        self.score_popups.empty()
         
         self.player = Player(self.screen_width // 2, self.screen_height // 2, 
                             self.screen_width, self.screen_height)
@@ -312,6 +379,9 @@ class GameManager:
             for health_pack in self.health_packs:
                 health_pack.update()
             
+            # Update score popups
+            self.score_popups.update()
+            
             # Check player bullet-enemy collisions
             for bullet in self.player_bullets:
                 hit_enemies = pygame.sprite.spritecollide(bullet, self.enemies, False)
@@ -334,13 +404,23 @@ class GameManager:
                                     energy_charge = config.get('enemy_circle', 'energy_charge')
                                     points = config.get('enemy_circle', 'points')
                             
+                            # Triple points when powered up
+                            if self.player.powered_up:
+                                points *= 3
+                            
                             self.score += points
+                            
+                            # Create floating score popup
+                            score_popup = ScorePopup(enemy.rect.centerx, enemy.rect.centery, points, self.player.powered_up)
+                            self.score_popups.add(score_popup)
                             
                             # Add energy (cap at 1.0)
                             self.energy = min(1.0, self.energy + energy_charge)
                             
                             # Drop health pack with calculated chance
-                            if random.random() < health_drop_chance:
+                            # Triple drop rate when player is powered up
+                            actual_drop_chance = health_drop_chance * 3 if self.player.powered_up else health_drop_chance
+                            if random.random() < actual_drop_chance:
                                 health_pack = HealthPack(enemy.rect.centerx, enemy.rect.centery)
                                 self.health_packs.add(health_pack)
                                 self.all_sprites.add(health_pack)
@@ -429,6 +509,9 @@ class GameManager:
         """Draw playing screen"""
         # Draw all sprites
         self.all_sprites.draw(self.screen)
+        
+        # Draw score popups (on top of game sprites but below UI)
+        self.score_popups.draw(self.screen)
         
         # Draw UI - Score
         score_text = self.font.render(f"Score: {self.score}", True, (255, 255, 255))

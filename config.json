@@ -35,7 +35,7 @@
         "pulse_interval": 30
     },
     "powerup": {
-        "duration_seconds": 5,
+        "duration_seconds": 10,
         "fire_rate_multiplier": 3,
         "triple_shot": true,
         "initial_energy": 0.9
