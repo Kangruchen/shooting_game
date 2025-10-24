@@ -9,8 +9,9 @@ class AudioManager:
     """Manages all audio in the game"""
     
     def __init__(self):
-        # Initialize pygame mixer
+        # Initialize pygame mixer with more channels for rapid fire
         pygame.mixer.init()
+        pygame.mixer.set_num_channels(64)  # Increase to 64 channels for extreme rapid fire
         
         # Volume settings (0.0 to 1.0)
         self.music_volume = 0.5
@@ -26,10 +27,14 @@ class AudioManager:
         """Load all sound effects"""
         sound_files = {
             'shoot': 'assets/sounds/shoot.wav',
+            'super_shoot': 'assets/sounds/super_shoot.wav',  # 强化状态射击音效
             'hit': 'assets/sounds/hit.wav',
             'enemy_shoot': 'assets/sounds/enemy_shoot.wav',
             'game_over': 'assets/sounds/game_over.wav',
-            'menu_select': 'assets/sounds/menu_select.wav'
+            'menu_select': 'assets/sounds/menu_select.wav',
+            'heal': 'assets/sounds/heal.wav',           # 捡到血包
+            'warning': 'assets/sounds/warning.wav',     # 难度提升
+            'explosion': 'assets/sounds/explosion.wav'  # 玩家被击中
         }
         
         for name, filepath in sound_files.items():
@@ -77,10 +82,16 @@ class AudioManager:
         pygame.mixer.music.unpause()
     
     def play_sound(self, sound_name):
-        """Play a sound effect"""
+        """Play a sound effect - optimized for rapid fire"""
         if sound_name in self.sounds and self.sounds[sound_name]:
             try:
-                self.sounds[sound_name].play()
+                # Find a free channel and play
+                channel = pygame.mixer.find_channel()
+                if channel:
+                    channel.play(self.sounds[sound_name])
+                else:
+                    # If no channel available, force play (will stop oldest sound)
+                    self.sounds[sound_name].play()
             except Exception as e:
                 print(f"Warning: Could not play sound '{sound_name}': {e}")
     
@@ -104,6 +115,24 @@ class AudioManager:
         else:
             self.resume_music()
             return True
+    
+    def set_music_speed(self, speed):
+        """Set music playback speed (pitch shift)
+        Note: Pygame mixer doesn't support direct speed change,
+        but we can simulate it by adjusting frequency
+        """
+        try:
+            # Get current frequency (default is 22050 or 44100)
+            current_freq = pygame.mixer.get_init()[0] if pygame.mixer.get_init() else 22050
+            # Adjust frequency based on speed (1.0 = normal, 1.1 = 10% faster, etc.)
+            new_freq = int(current_freq * speed)
+            # Reinitialize mixer with new frequency
+            pygame.mixer.quit()
+            pygame.mixer.init(frequency=new_freq)
+            # Reload sounds after reinit
+            self.load_sounds()
+        except Exception as e:
+            print(f"Warning: Could not change music speed: {e}")
     
     def cleanup(self):
         """Clean up audio resources"""
