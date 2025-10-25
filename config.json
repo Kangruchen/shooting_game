@@ -159,13 +159,5 @@
         "arrow_distance": 30,
         "pulse_speed": 0.15,
         "warning_color": [255, 50, 50]
-    },
-    "bullet_time": {
-        "trigger_health": 1,
-        "duration_seconds": 3,
-        "time_scale": 0.4,
-        "cooldown_seconds": 10,
-        "vignette_intensity": 180,
-        "desaturation": 0.7
     }
 }

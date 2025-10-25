@@ -846,28 +846,29 @@ class GameManager:
                     (x + 14, y + 28)
                 ], width=2)
         
-        # Draw UI - Game Time with icon
+        # Draw UI - Game Time with icon (moved further right)
         minutes = int(self.game_time // 60)
         seconds = int(self.game_time % 60)
         time_text = self.font.render(f"{minutes:02d}:{seconds:02d}", True, (200, 200, 255))
         shadow_text = self.font.render(f"{minutes:02d}:{seconds:02d}", True, (0, 0, 0))
-        # Clock icon
-        pygame.draw.circle(self.screen, (200, 200, 255), (self.screen_width - 220, 28), 12, width=2)
-        pygame.draw.line(self.screen, (200, 200, 255), (self.screen_width - 220, 28), (self.screen_width - 220, 20), 2)
-        pygame.draw.line(self.screen, (200, 200, 255), (self.screen_width - 220, 28), (self.screen_width - 214, 28), 2)
-        self.screen.blit(shadow_text, (self.screen_width - 185, 17))
-        self.screen.blit(time_text, (self.screen_width - 187, 15))
+        # Clock icon (moved right)
+        pygame.draw.circle(self.screen, (200, 200, 255), (self.screen_width - 180, 28), 12, width=2)
+        pygame.draw.line(self.screen, (200, 200, 255), (self.screen_width - 180, 28), (self.screen_width - 180, 20), 2)
+        pygame.draw.line(self.screen, (200, 200, 255), (self.screen_width - 180, 28), (self.screen_width - 174, 28), 2)
+        self.screen.blit(shadow_text, (self.screen_width - 145, 17))
+        self.screen.blit(time_text, (self.screen_width - 147, 15))
         
-        # Draw difficulty level indicator with style
+        # Draw difficulty level indicator with style (smaller font)
         if self.difficulty_level > 0:
             stages = config.get('difficulty', 'stages')
             stage_name = stages[self.difficulty_level]['name']
-            level_text = self.font.render(stage_name, True, (255, 200, 100))
-            shadow_text = self.font.render(stage_name, True, (0, 0, 0))
+            small_font = pygame.font.Font(None, 28)  # Smaller font (was 36)
+            level_text = small_font.render(stage_name, True, (255, 200, 100))
+            shadow_text = small_font.render(stage_name, True, (0, 0, 0))
             self.screen.blit(shadow_text, (self.screen_width - level_text.get_width() - 18, 52))
             self.screen.blit(level_text, (self.screen_width - level_text.get_width() - 20, 50))
         
-        # Draw UI - Power-up status
+        # Draw UI - Power-up status (moved below energy bar to avoid overlap)
         if self.player.powered_up:
             fps = config.get('game', 'fps')
             time_left = self.player.powerup_timer / fps
@@ -876,8 +877,10 @@ class GameManager:
             pulse = abs(math.sin(self.player.powerup_timer * 0.1)) * 20
             powerup_bg = pygame.Surface((powerup_text.get_width() + 20, powerup_text.get_height() + 10), pygame.SRCALPHA)
             pygame.draw.rect(powerup_bg, (255, 215, 0, int(50 + pulse)), powerup_bg.get_rect(), border_radius=5)
-            self.screen.blit(powerup_bg, (self.screen_width // 2 - powerup_text.get_width() // 2 - 10, 10))
-            self.screen.blit(powerup_text, (self.screen_width // 2 - powerup_text.get_width() // 2, 15))
+            # Position below energy bar: energy bar is at y=30 with height=50, so safe position is 30+50+15=95
+            powerup_y = 95
+            self.screen.blit(powerup_bg, (self.screen_width // 2 - powerup_text.get_width() // 2 - 10, powerup_y))
+            self.screen.blit(powerup_text, (self.screen_width // 2 - powerup_text.get_width() // 2, powerup_y + 5))
         
         # Draw energy bar at bottom of screen
         self.draw_energy_bar()
@@ -1079,10 +1082,10 @@ class GameManager:
     
     def draw_energy_bar(self):
         """Draw enhanced energy bar with glow effects"""
-        bar_width = 500
-        bar_height = 35
+        bar_width = 300  # Adjusted to 300
+        bar_height = 50  # Adjusted to 50
         bar_x = (self.screen_width - bar_width) // 2
-        bar_y = self.screen_height - 70
+        bar_y = 30  # Adjusted to 30 pixels from top
         
         # Clamp energy to 0.0-1.0 range for display
         display_energy = max(0.0, min(1.0, self.energy))
@@ -1143,15 +1146,15 @@ class GameManager:
         
         # Text
         if self.energy >= 1.0:
-            # Pulsing text when ready
+            # Pulsing text when ready - display below bar
             pulse_alpha = int(200 + abs(math.sin(self.game_time * 6)) * 55)
-            energy_text = self.font.render("⚡ PRESS SPACE TO ACTIVATE ⚡", True, (255, 255, 0))
+            energy_text = self.font.render(">>> PRESS SPACE TO ACTIVATE <<<", True, (255, 255, 0))
             energy_text.set_alpha(pulse_alpha)
             text_x = self.screen_width // 2 - energy_text.get_width() // 2
-            text_y = bar_y - 40
+            text_y = bar_y + bar_height + 10  # Display below the bar (was bar_y - 40)
             
             # Text shadow
-            shadow = self.font.render("⚡ PRESS SPACE TO ACTIVATE ⚡", True, (100, 100, 0))
+            shadow = self.font.render(">>> PRESS SPACE TO ACTIVATE <<<", True, (100, 100, 0))
             self.screen.blit(shadow, (text_x + 2, text_y + 2))
             self.screen.blit(energy_text, (text_x, text_y))
         else:
