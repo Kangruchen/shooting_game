@@ -254,6 +254,10 @@ class Enemy(pygame.sprite.Sprite):
         self.screen_width = screen_width
         self.screen_height = screen_height
         
+        # Hit effect (initialize before drawing)
+        self.hit_flash = 0  # Flash duration when hit
+        self.hit_flash_duration = 6  # Frames to flash white
+        
         # Create enemy surface with transparency
         self.image = pygame.Surface((40, 40), pygame.SRCALPHA)
         self.draw_circle_enemy()
@@ -268,6 +272,10 @@ class Enemy(pygame.sprite.Sprite):
             config.get('enemy_circle', 'shoot_cooldown_max')
         )
         self.enemy_type = "circle"
+        
+        # Damage properties from config
+        self.bullet_damage = config.get('enemy_circle', 'bullet_damage')
+        self.collision_damage = config.get('enemy_circle', 'collision_damage')
     
     def draw_circle_enemy(self):
         """Draw circle enemy in retro space game style"""
@@ -276,17 +284,25 @@ class Enemy(pygame.sprite.Sprite):
         
         center = (20, 20)
         
-        # Main body - solid red circle
-        pygame.draw.circle(self.image, (220, 0, 0), center, 16)
-        
-        # Darker inner ring (depth)
-        pygame.draw.circle(self.image, (150, 0, 0), center, 12)
-        
-        # Central core panel (darker red square)
-        pygame.draw.rect(self.image, (180, 0, 0), (14, 14, 12, 12))
-        
-        # Center energy indicator (small yellow square)
-        pygame.draw.rect(self.image, (255, 200, 0), (17, 17, 6, 6))
+        # Hit flash effect - flash white when hit
+        if self.hit_flash > 0:
+            # White flash overlay
+            flash_intensity = int(255 * (self.hit_flash / self.hit_flash_duration))
+            pygame.draw.circle(self.image, (255, 255, 255), center, 18)
+            pygame.draw.circle(self.image, (255, 255, flash_intensity), center, 16)
+        else:
+            # Normal appearance
+            # Main body - solid red circle
+            pygame.draw.circle(self.image, (220, 0, 0), center, 16)
+            
+            # Darker inner ring (depth)
+            pygame.draw.circle(self.image, (150, 0, 0), center, 12)
+            
+            # Central core panel (darker red square)
+            pygame.draw.rect(self.image, (180, 0, 0), (14, 14, 12, 12))
+            
+            # Center energy indicator (small yellow square)
+            pygame.draw.rect(self.image, (255, 200, 0), (17, 17, 6, 6))
         
         # Four directional panels (retro sci-fi details)
         panel_color = (100, 0, 0)
@@ -309,6 +325,11 @@ class Enemy(pygame.sprite.Sprite):
         
     def update(self, player_pos):
         """Move enemy toward player and handle shooting"""
+        # Update hit flash effect
+        if self.hit_flash > 0:
+            self.hit_flash -= 1
+            self.draw_circle_enemy()  # Redraw with flash effect
+        
         # Calculate direction to player
         dx = player_pos[0] - self.rect.centerx
         dy = player_pos[1] - self.rect.centery
@@ -350,13 +371,19 @@ class Enemy(pygame.sprite.Sprite):
                 config.get('enemy_circle', 'shoot_cooldown_min'),
                 config.get('enemy_circle', 'shoot_cooldown_max')
             )
-            return Bullet(self.rect.centerx, self.rect.centery, dx, dy, (255, 100, 100), is_enemy=True)
+            return Bullet(self.rect.centerx, self.rect.centery, dx, dy, 
+                         (255, 100, 100), is_enemy=True, damage=self.bullet_damage)
         
         return None
     
     def take_damage(self, damage):
         """Reduce enemy health"""
         self.health -= damage
+        
+        # Trigger hit flash effect
+        self.hit_flash = self.hit_flash_duration
+        self.draw_circle_enemy()  # Redraw immediately with flash
+        
         if self.health <= 0:
             self.kill()
             return True
@@ -370,6 +397,15 @@ class TriangleEnemy(pygame.sprite.Sprite):
         super().__init__()
         self.screen_width = screen_width
         self.screen_height = screen_height
+        
+    def __init__(self, x, y, screen_width, screen_height):
+        super().__init__()
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+        
+        # Hit effect (initialize before drawing)
+        self.hit_flash = 0  # Flash duration when hit
+        self.hit_flash_duration = 6  # Frames to flash white
         
         # Create triangle enemy surface
         self.image = pygame.Surface((36, 36), pygame.SRCALPHA)
@@ -385,56 +421,74 @@ class TriangleEnemy(pygame.sprite.Sprite):
             config.get('enemy_triangle', 'shoot_cooldown_max')
         )
         self.enemy_type = "triangle"
+        
+        # Damage properties from config
+        self.bullet_damage = config.get('enemy_triangle', 'bullet_damage')
+        self.collision_damage = config.get('enemy_triangle', 'collision_damage')
     
     def draw_triangle_enemy(self):
         """Draw triangle enemy in retro space game style"""
         # Clear surface
         self.image.fill((0, 0, 0, 0))
         
-        # Triangle points (pointing down for aggressive look)
-        points = [
-            (18, 6),   # Top center
-            (6, 28),   # Bottom left
-            (30, 28)   # Bottom right
-        ]
-        
-        # Main body - solid purple/magenta triangle
-        pygame.draw.polygon(self.image, (200, 0, 200), points)
-        
-        # Inner triangle (darker purple for depth)
-        inner_points = [
-            (18, 12),
-            (12, 24),
-            (24, 24)
-        ]
-        pygame.draw.polygon(self.image, (140, 0, 140), inner_points)
-        
-        # Core triangle (very dark)
-        core_points = [
-            (18, 16),
-            (15, 22),
-            (21, 22)
-        ]
-        pygame.draw.polygon(self.image, (100, 0, 100), core_points)
-        
-        # Energy core (yellow center)
-        pygame.draw.circle(self.image, (255, 255, 0), (18, 20), 3)
-        pygame.draw.circle(self.image, (255, 255, 200), (18, 20), 1)
-        
-        # Three corner lights (cyan accents)
-        pygame.draw.circle(self.image, (0, 255, 255), (18, 8), 2)   # Top
-        pygame.draw.circle(self.image, (0, 255, 255), (8, 27), 2)   # Bottom left
-        pygame.draw.circle(self.image, (0, 255, 255), (28, 27), 2)  # Bottom right
-        
-        # Outline for definition
-        pygame.draw.polygon(self.image, (255, 100, 255), points, width=2)
-        
-        # Edge highlights (aggressive look)
-        pygame.draw.line(self.image, (255, 150, 255), (18, 6), (6, 28), 1)
-        pygame.draw.line(self.image, (255, 150, 255), (18, 6), (30, 28), 1)
+        # Hit flash effect - flash white when hit
+        if self.hit_flash > 0:
+            # White flash overlay
+            flash_intensity = int(255 * (self.hit_flash / self.hit_flash_duration))
+            points = [(18, 6), (6, 28), (30, 28)]
+            pygame.draw.polygon(self.image, (255, 255, 255), points)
+            pygame.draw.polygon(self.image, (255, 255, flash_intensity), points, width=3)
+        else:
+            # Normal appearance
+            # Triangle points (pointing down for aggressive look)
+            points = [
+                (18, 6),   # Top center
+                (6, 28),   # Bottom left
+                (30, 28)   # Bottom right
+            ]
+            
+            # Main body - solid purple/magenta triangle
+            pygame.draw.polygon(self.image, (200, 0, 200), points)
+            
+            # Inner triangle (darker purple for depth)
+            inner_points = [
+                (18, 12),
+                (12, 24),
+                (24, 24)
+            ]
+            pygame.draw.polygon(self.image, (140, 0, 140), inner_points)
+            
+            # Core triangle (very dark)
+            core_points = [
+                (18, 16),
+                (15, 22),
+                (21, 22)
+            ]
+            pygame.draw.polygon(self.image, (100, 0, 100), core_points)
+            
+            # Energy core (yellow center)
+            pygame.draw.circle(self.image, (255, 255, 0), (18, 20), 3)
+            pygame.draw.circle(self.image, (255, 255, 200), (18, 20), 1)
+            
+            # Three corner lights (cyan accents)
+            pygame.draw.circle(self.image, (0, 255, 255), (18, 8), 2)   # Top
+            pygame.draw.circle(self.image, (0, 255, 255), (8, 27), 2)   # Bottom left
+            pygame.draw.circle(self.image, (0, 255, 255), (28, 27), 2)  # Bottom right
+            
+            # Outline for definition
+            pygame.draw.polygon(self.image, (255, 100, 255), points, width=2)
+            
+            # Edge highlights (aggressive look)
+            pygame.draw.line(self.image, (255, 150, 255), (18, 6), (6, 28), 1)
+            pygame.draw.line(self.image, (255, 150, 255), (18, 6), (30, 28), 1)
     
     def update(self, player_pos):
         """Move triangle enemy toward player (same as circle enemy)"""
+        # Update hit flash effect
+        if self.hit_flash > 0:
+            self.hit_flash -= 1
+            self.draw_triangle_enemy()  # Redraw with flash effect
+        
         # Calculate direction to player
         dx = player_pos[0] - self.rect.centerx
         dy = player_pos[1] - self.rect.centery
@@ -476,13 +530,185 @@ class TriangleEnemy(pygame.sprite.Sprite):
                 config.get('enemy_triangle', 'shoot_cooldown_min'),
                 config.get('enemy_triangle', 'shoot_cooldown_max')
             )
-            return Bullet(self.rect.centerx, self.rect.centery, dx, dy, (255, 100, 255), is_enemy=True)
+            return Bullet(self.rect.centerx, self.rect.centery, dx, dy, 
+                         (255, 100, 255), is_enemy=True, damage=self.bullet_damage)
         
         return None
     
     def take_damage(self, damage):
         """Reduce enemy health"""
         self.health -= damage
+        
+        # Trigger hit flash effect
+        self.hit_flash = self.hit_flash_duration
+        self.draw_triangle_enemy()  # Redraw immediately with flash
+        
+        if self.health <= 0:
+            self.kill()
+            return True
+        return False
+
+
+class SquareEnemy(pygame.sprite.Sprite):
+    """Square Enemy - Large, slow tank with high health and heavy damage"""
+    
+    def __init__(self, x, y, screen_width, screen_height):
+        super().__init__()
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+        
+        # Hit effect (initialize before drawing)
+        self.hit_flash = 0  # Flash duration when hit
+        self.hit_flash_duration = 8  # Frames to flash white (slightly longer for big enemy)
+        
+        # Create large square enemy surface (80x80 - double the size of others)
+        self.image = pygame.Surface((80, 80), pygame.SRCALPHA)
+        self.draw_square_enemy()
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
+        
+        # Square enemy stats from config
+        self.speed = config.get('enemy_square', 'speed')
+        self.health = config.get('enemy_square', 'health')
+        self.max_health = self.health  # Store max health for health bar
+        self.shoot_cooldown = random.randint(
+            config.get('enemy_square', 'shoot_cooldown_min'),
+            config.get('enemy_square', 'shoot_cooldown_max')
+        )
+        self.enemy_type = "square"
+        self.damage = config.get('enemy_square', 'bullet_damage')
+        
+        # Damage properties from config (for consistency)
+        self.bullet_damage = config.get('enemy_square', 'bullet_damage')
+        self.collision_damage = config.get('enemy_square', 'collision_damage')
+    
+    def draw_square_enemy(self):
+        """Draw large square enemy in retro space game style - imposing boss-like appearance"""
+        # Clear surface
+        self.image.fill((0, 0, 0, 0))
+        
+        # Hit flash effect - flash white when hit
+        if self.hit_flash > 0:
+            # White flash overlay (more intense for big enemy)
+            flash_intensity = int(255 * (self.hit_flash / self.hit_flash_duration))
+            pygame.draw.rect(self.image, (255, 255, 255), (0, 0, 80, 80), border_radius=4)
+            pygame.draw.rect(self.image, (255, 255, flash_intensity), (6, 6, 68, 68), border_radius=3)
+        else:
+            # Normal appearance
+            # Main body - large orange/yellow square with dark borders
+            main_color = (255, 150, 0)  # Orange
+            dark_color = (150, 80, 0)   # Dark orange
+            accent_color = (255, 200, 50)  # Light yellow
+            
+            # Outer frame (thick border)
+            pygame.draw.rect(self.image, dark_color, (0, 0, 80, 80), border_radius=4)
+            
+            # Main body
+            pygame.draw.rect(self.image, main_color, (6, 6, 68, 68), border_radius=3)
+            
+            # Inner darker square (depth)
+            pygame.draw.rect(self.image, (180, 100, 0), (12, 12, 56, 56), border_radius=2)
+            
+            # Central core panel
+            pygame.draw.rect(self.image, dark_color, (20, 20, 40, 40))
+            
+            # Energy core (large glowing center)
+            pygame.draw.rect(self.image, (255, 255, 0), (32, 32, 16, 16))
+            pygame.draw.rect(self.image, (255, 255, 200), (36, 36, 8, 8))
+            
+            # Four corner armor panels
+            panel_size = 12
+            pygame.draw.rect(self.image, (200, 120, 0), (8, 8, panel_size, panel_size))     # Top-left
+            pygame.draw.rect(self.image, (200, 120, 0), (60, 8, panel_size, panel_size))    # Top-right
+            pygame.draw.rect(self.image, (200, 120, 0), (8, 60, panel_size, panel_size))    # Bottom-left
+            pygame.draw.rect(self.image, (200, 120, 0), (60, 60, panel_size, panel_size))   # Bottom-right
+            
+            # Corner lights (red warning lights)
+            pygame.draw.circle(self.image, (255, 0, 0), (14, 14), 3)
+            pygame.draw.circle(self.image, (255, 0, 0), (66, 14), 3)
+            pygame.draw.circle(self.image, (255, 0, 0), (14, 66), 3)
+            pygame.draw.circle(self.image, (255, 0, 0), (66, 66), 3)
+            
+            # Side panels (armor plates)
+            pygame.draw.rect(self.image, (220, 130, 10), (8, 34, 8, 12))   # Left
+            pygame.draw.rect(self.image, (220, 130, 10), (64, 34, 8, 12))  # Right
+            pygame.draw.rect(self.image, (220, 130, 10), (34, 8, 12, 8))   # Top
+            pygame.draw.rect(self.image, (220, 130, 10), (34, 64, 12, 8))  # Bottom
+            
+            # Highlights and edges
+            pygame.draw.rect(self.image, accent_color, (6, 6, 68, 68), width=2, border_radius=3)
+            pygame.draw.rect(self.image, (255, 180, 50), (12, 12, 56, 56), width=1, border_radius=2)
+            
+            # Crosshair pattern (menacing look)
+            pygame.draw.line(self.image, (255, 100, 0), (40, 20), (40, 32), 2)  # Top vertical
+            pygame.draw.line(self.image, (255, 100, 0), (40, 48), (40, 60), 2)  # Bottom vertical
+            pygame.draw.line(self.image, (255, 100, 0), (20, 40), (32, 40), 2)  # Left horizontal
+            pygame.draw.line(self.image, (255, 100, 0), (48, 40), (60, 40), 2)  # Right horizontal
+    
+    def update(self, player_pos):
+        """Move square enemy toward player slowly"""
+        # Update hit flash effect
+        if self.hit_flash > 0:
+            self.hit_flash -= 1
+            self.draw_square_enemy()  # Redraw with flash effect
+        
+        # Calculate direction to player
+        dx = player_pos[0] - self.rect.centerx
+        dy = player_pos[1] - self.rect.centery
+        distance = math.sqrt(dx**2 + dy**2)
+        
+        if distance > 0:
+            # Normalize and move toward player (very slow)
+            dx = dx / distance
+            dy = dy / distance
+            self.rect.x += dx * self.speed
+            self.rect.y += dy * self.speed
+        
+        # Update shoot cooldown
+        if self.shoot_cooldown > 0:
+            self.shoot_cooldown -= 1
+    
+    def should_shoot(self):
+        """Check if enemy should shoot"""
+        return self.shoot_cooldown <= 0
+    
+    def shoot(self, player_pos):
+        """Shoot heavy bullet toward player"""
+        if not self.should_shoot():
+            return None
+        
+        # Calculate direction to player
+        dx = player_pos[0] - self.rect.centerx
+        dy = player_pos[1] - self.rect.centery
+        distance = math.sqrt(dx**2 + dy**2)
+        
+        if distance > 0:
+            # Normalize direction and apply bullet speed from config
+            bullet_speed = config.get('enemy_square', 'bullet_speed')
+            dx = dx / distance * bullet_speed
+            dy = dy / distance * bullet_speed
+            
+            # Reset cooldown from config
+            self.shoot_cooldown = random.randint(
+                config.get('enemy_square', 'shoot_cooldown_min'),
+                config.get('enemy_square', 'shoot_cooldown_max')
+            )
+            
+            # Create heavy bullet with damage parameter
+            bullet = Bullet(self.rect.centerx, self.rect.centery, dx, dy, 
+                          (255, 150, 0), is_enemy=True, damage=self.bullet_damage)
+            return bullet
+        
+        return None
+    
+    def take_damage(self, damage):
+        """Reduce enemy health"""
+        self.health -= damage
+        
+        # Trigger hit flash effect
+        self.hit_flash = self.hit_flash_duration
+        self.draw_square_enemy()  # Redraw immediately with flash
+        
         if self.health <= 0:
             self.kill()
             return True
@@ -492,28 +718,54 @@ class TriangleEnemy(pygame.sprite.Sprite):
 class Bullet(pygame.sprite.Sprite):
     """Bullet class"""
     
-    def __init__(self, x, y, speed_x, speed_y, color=(255, 255, 0), is_enemy=False):
+    def __init__(self, x, y, speed_x, speed_y, color=(255, 255, 0), is_enemy=False, damage=1):
         super().__init__()
         
-        # Create bullet surface with transparency and glow
-        self.image = pygame.Surface((12, 12), pygame.SRCALPHA)
+        self.damage = damage  # Damage amount
         self.is_enemy = is_enemy
-        self.draw_bullet(color, is_enemy)
+        
+        # Heavy bullets are larger and more visible
+        size = 18 if damage > 1 else 12
+        self.image = pygame.Surface((size, size), pygame.SRCALPHA)
+        self.draw_bullet(color, is_enemy, damage)
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
         
         self.speed_x = speed_x
         self.speed_y = speed_y
     
-    def draw_bullet(self, color, is_enemy):
-        """Draw bullet in retro space game style - simple with clean glow"""
+    def draw_bullet(self, color, is_enemy, damage=1):
+        """Draw bullet in retro space game style - simple with clean glow
+        Heavy bullets (damage > 1) are larger and more menacing
+        """
         # Clear surface
         self.image.fill((0, 0, 0, 0))
         
-        center = (6, 6)
-        
-        if is_enemy:
-            # Enemy bullet - red/orange retro style
+        if damage > 1:
+            # Heavy bullet - larger and more menacing
+            center = (9, 9)
+            
+            # Pulsing outer glow (larger radius)
+            pygame.draw.circle(self.image, (255, 80, 0, 60), center, 9)
+            pygame.draw.circle(self.image, (255, 60, 0, 100), center, 8)
+            pygame.draw.circle(self.image, (255, 40, 0, 140), center, 7)
+            
+            # Main body - menacing orange-red
+            pygame.draw.circle(self.image, (255, 60, 0), center, 6)
+            
+            # Middle layer - bright warning color
+            pygame.draw.circle(self.image, (255, 120, 0), center, 4)
+            
+            # Inner core - intense yellow
+            pygame.draw.circle(self.image, (255, 200, 50), center, 3)
+            
+            # Center highlight - white hot
+            pygame.draw.circle(self.image, (255, 255, 200), center, 2)
+            pygame.draw.circle(self.image, (255, 255, 255), center, 1)
+            
+        elif is_enemy:
+            # Normal enemy bullet - red/orange retro style
+            center = (6, 6)
             # Outer glow ring
             pygame.draw.circle(self.image, (255, 100, 0, 80), center, 6)
             pygame.draw.circle(self.image, (255, 50, 0, 120), center, 5)
@@ -529,6 +781,7 @@ class Bullet(pygame.sprite.Sprite):
             
         else:
             # Player bullet - cyan/white retro style
+            center = (6, 6)
             # Outer glow ring
             pygame.draw.circle(self.image, (0, 255, 255, 100), center, 6)
             pygame.draw.circle(self.image, (100, 255, 255, 150), center, 5)
@@ -608,9 +861,30 @@ class HealthPack(pygame.sprite.Sprite):
         # Outer circle border
         pygame.draw.circle(self.image, (0, 200, 0), center, 10, width=2)
     
-    def update(self):
-        """Move health pack slowly downward and handle lifetime"""
-        self.rect.y += self.speed_y
+    def update(self, player_pos=None, player_powered_up=False):
+        """Move health pack slowly downward and handle lifetime
+        
+        Args:
+            player_pos: Tuple (x, y) of player position for auto-collect
+            player_powered_up: Whether player is in powered-up state
+        """
+        # Auto-collect during power-up mode
+        if player_powered_up and player_pos and config.get('powerup', 'auto_collect_health_packs'):
+            # Move towards player
+            dx = player_pos[0] - self.rect.centerx
+            dy = player_pos[1] - self.rect.centery
+            distance = math.sqrt(dx**2 + dy**2)
+            
+            if distance > 0:
+                attract_speed = config.get('powerup', 'health_pack_attract_speed')
+                dx = dx / distance * attract_speed
+                dy = dy / distance * attract_speed
+                self.rect.x += dx
+                self.rect.y += dy
+        else:
+            # Normal drift downward
+            self.rect.y += self.speed_y
+        
         self.lifetime -= 1
         self.pulse_timer += 1
         
@@ -789,3 +1063,46 @@ class PowerUp(pygame.sprite.Sprite):
         
         # Brighter outer ring
         pygame.draw.circle(self.image, (255, 230, 0), center, 12, width=2)
+
+
+class Particle(pygame.sprite.Sprite):
+    """Particle for explosion effects"""
+    
+    def __init__(self, x, y, color, speed_x, speed_y, size, lifetime):
+        super().__init__()
+        self.lifetime = lifetime
+        self.age = 0
+        self.speed_x = speed_x
+        self.speed_y = speed_y
+        self.base_color = color
+        self.size = size
+        
+        # Create particle surface
+        self.image = pygame.Surface((size, size), pygame.SRCALPHA)
+        pygame.draw.circle(self.image, color, (size // 2, size // 2), size // 2)
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
+        
+    def update(self):
+        """Update particle position and fade out"""
+        self.age += 1
+        
+        # Move particle
+        self.rect.x += self.speed_x
+        self.rect.y += self.speed_y
+        
+        # Apply gravity
+        self.speed_y += 0.15
+        
+        # Fade out
+        if self.age > self.lifetime * 0.5:
+            fade = 1.0 - (self.age - self.lifetime * 0.5) / (self.lifetime * 0.5)
+            alpha = int(255 * fade)
+            # Redraw with alpha
+            self.image = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
+            color_with_alpha = (*self.base_color[:3], alpha)
+            pygame.draw.circle(self.image, color_with_alpha, (self.size // 2, self.size // 2), self.size // 2)
+        
+        # Remove when lifetime expires
+        if self.age >= self.lifetime:
+            self.kill()

@@ -1,6 +1,7 @@
 {
     "player": {
         "max_health": 3,
+        "max_health_limit": 5,
         "speed": 5,
         "shoot_cooldown": 10,
         "bullet_speed": 7,
@@ -12,8 +13,10 @@
         "shoot_cooldown_min": 120,
         "shoot_cooldown_max": 240,
         "bullet_speed": 3,
+        "bullet_damage": 1,
+        "collision_damage": 1,
         "points": 10,
-        "spawn_weight": 0.75,
+        "spawn_weight": 0.6,
         "health_pack_drop_chance": 0.05,
         "energy_charge": 0.025
     },
@@ -23,34 +26,146 @@
         "shoot_cooldown_min": 30,
         "shoot_cooldown_max": 60,
         "bullet_speed": 4,
+        "bullet_damage": 1,
+        "collision_damage": 1,
         "points": 20,
         "spawn_weight": 0.25,
         "health_pack_drop_chance": 0.1,
+        "energy_charge": 0.05
+    },
+    "enemy_square": {
+        "health": 100,
+        "speed": 1.0,
+        "shoot_cooldown_min": 180,
+        "shoot_cooldown_max": 300,
+        "bullet_speed": 3,
+        "bullet_damage": 2,
+        "collision_damage": 2,
+        "points": 50,
+        "spawn_weight": 0.15,
+        "health_pack_drop_chance": 0.2,
         "energy_charge": 0.05
     },
     "health_pack": {
         "heal_amount": 1,
         "drift_speed": 0.5,
         "lifetime_seconds": 10,
-        "pulse_interval": 30
+        "pulse_interval": 30,
+        "full_health_bonus_score": 50
     },
     "powerup": {
         "duration_seconds": 10,
         "fire_rate_multiplier": 3,
         "triple_shot": true,
-        "initial_energy": 0.9
+        "health_drop_rate_multiplier": 3,
+        "score_multiplier": 3,
+        "auto_collect_health_packs": true,
+        "health_pack_attract_speed": 8,
+        "initial_energy": 0
     },
     "difficulty": {
         "level_up_interval_seconds": 20,
-        "initial_spawn_delay": 90,
-        "min_spawn_delay": 30,
-        "spawn_delay_decrease": 10
+        "max_level": 6,
+        "stages": [
+            {
+                "level": 0,
+                "name": "Stage 1 - Easy",
+                "spawn_delay": 90,
+                "circle_weight": 1.0,
+                "triangle_weight": 0.0,
+                "square_weight": 0.0
+            },
+            {
+                "level": 1,
+                "name": "Stage 2 - Normal",
+                "spawn_delay": 75,
+                "circle_weight": 0.85,
+                "triangle_weight": 0.15,
+                "square_weight": 0.0
+            },
+            {
+                "level": 2,
+                "name": "Stage 3 - Getting Hard",
+                "spawn_delay": 60,
+                "circle_weight": 0.7,
+                "triangle_weight": 0.3,
+                "square_weight": 0.0
+            },
+            {
+                "level": 3,
+                "name": "Stage 4 - Hard",
+                "spawn_delay": 50,
+                "circle_weight": 0.7,
+                "triangle_weight": 0.2,
+                "square_weight": 0.1
+            },
+            {
+                "level": 4,
+                "name": "Stage 5 - Very Hard",
+                "spawn_delay": 40,
+                "circle_weight": 0.6,
+                "triangle_weight": 0.2,
+                "square_weight": 0.2
+            },
+            {
+                "level": 5,
+                "name": "Stage 6 - Extreme",
+                "spawn_delay": 35,
+                "circle_weight": 0.5,
+                "triangle_weight": 0.3,
+                "square_weight": 0.2
+            },
+            {
+                "level": 6,
+                "name": "Stage 7 - HELL",
+                "spawn_delay": 30,
+                "circle_weight": 0.4,
+                "triangle_weight": 0.3,
+                "square_weight": 0.3,
+                "all_enemies_damage": 2,
+                "all_enemies_collision_damage": 2
+            }
+        ]
     },
     "game": {
         "screen_width": 800,
         "screen_height": 600,
         "fps": 60,
         "background_color": [20, 20, 40],
-        "star_count": 100
+        "star_count": 150,
+        "nebula_layers": 3
+    },
+    "particles": {
+        "explosion_count": 15,
+        "explosion_speed_min": 1,
+        "explosion_speed_max": 4,
+        "explosion_lifetime": 30,
+        "explosion_size_min": 2,
+        "explosion_size_max": 5
+    },
+    "screen_shake": {
+        "enemy_kill_intensity": 0,
+        "enemy_kill_duration": 0,
+        "player_hit_intensity": 5,
+        "player_hit_duration": 8,
+        "powerup_activate_intensity": 4,
+        "powerup_activate_duration": 10,
+        "square_kill_intensity": 4,
+        "square_kill_duration": 6
+    },
+    "warning": {
+        "detection_range": 60,
+        "arrow_size": 20,
+        "arrow_distance": 30,
+        "pulse_speed": 0.15,
+        "warning_color": [255, 50, 50]
+    },
+    "bullet_time": {
+        "trigger_health": 1,
+        "duration_seconds": 3,
+        "time_scale": 0.4,
+        "cooldown_seconds": 10,
+        "vignette_intensity": 180,
+        "desaturation": 0.7
     }
 }
